@@ -1,0 +1,181 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
+  // Further reading:
+  // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
+  // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
+  url      = env("DATABASE_URL")
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  content   String?
+  img       String?
+  created_at DateTime @default(now())
+  status    String?
+  share_by   String[]
+  is_liked   Boolean?
+  liked_by   String[]
+  hashtagId String[] // Array of hashtag ID
+  comments Comment[]
+
+  @@index([userId])
+}
+
+model Hashtag {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  post_count         Int?
+  post_per_period Int?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+}
+
+model Comment {
+  id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id])
+  postId        String?
+  post          Post?    @relation(fields: [postId], references: [id])
+  content       String?
+  img           String?
+  created_at    DateTime @default(now())
+  parentCmtId   String?
+  parentComment Comment? @relation("CommentReplies", fields: [parentCmtId], references: [id])
+  replies       Comment[] @relation("CommentReplies")
+
+  @@index([userId, postId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  type      String?
+  sourceId  String?
+  content   String?
+  create_at  DateTime @default(now())
+  status    String?
+
+  @@index([userId])
+}
+
+// Necessary for Next auth
+model Account {
+  id                    String  @id @default(cuid())
+  userId                String  @unique
+  type                  String
+  provider              String
+  providerAccountId     String
+  refresh_token         String? // @db.Text
+  access_token          String? // @db.Text
+  expires_at            Int?
+  token_type            String?
+  scope                 String?
+  id_token              String? // @db.Text
+  session_state         String?
+  user                  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refresh_token_expires Int?
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  session_token String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  email_verified DateTime?
+  image         String?
+  accounts      Account?
+  sessions      Session[]
+  posts         Post[]
+  user_info     UserInfo[]
+  user_settings UserSetting? // One-to-one relationship
+  portfolios    Portfolio?
+  comments Comment[]
+  notifications Notification[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String    @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Follower {
+  followerId  String
+  followingId String
+  created_at   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+model UserInfo {
+  id             String  @id @default(cuid())
+  bio            String?
+  avt_url        String?
+  cover_url      String?
+  address        String?
+  dob            DateTime?
+  gender         String?
+  education_level String? 
+  worked_at       String? 
+  hobby          String?
+  relationship String? 
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  userId         String? @unique
+  user           User?   @relation(fields: [userId], references: [id])
+  socialLinks    SocialLink[]
+}
+
+model UserSetting {
+  id            String  @id @default(cuid())
+  theme         String?
+  font          String?
+  language      String?
+  privacy_level  Int? 
+  change_pass    Boolean? 
+  userId        String? @unique // unique constraint for one-to-one
+  user          User?   @relation(fields: [userId], references: [id])
+}
+
+model SocialLink {
+  id            String  @id @default(cuid())
+  userInfoId    String?
+  platform      String?
+  url           String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  userInfo      UserInfo? @relation(fields: [userInfoId], references: [id])
+}
+
+model Portfolio {
+  id          String  @id @default(cuid())
+  avt         String?
+  userId      String? @unique
+  title       String?
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  user        User?   @relation(fields: [userId], references: [id])
+}
