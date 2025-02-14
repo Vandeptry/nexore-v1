@@ -21,6 +21,7 @@ model Post {
   content   String?
   img       String?
   created_at DateTime @default(now())
+  created_by String
   status    String?
   share_by   String[]
   is_liked   Boolean?
